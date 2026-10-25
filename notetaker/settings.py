@@ -11,7 +11,10 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-key-change
 
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com').split(',') if h.strip()]
+render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if render_host and render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_host)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -134,7 +137,7 @@ SPECTACULAR_SETTINGS = {
 
 # CORS
 CORS_ALLOWED_ORIGINS = [
-    o.strip() for o in os.environ.get(
+    o.strip().rstrip('/') for o in os.environ.get(
         'CORS_ALLOWED_ORIGINS',
         'http://localhost:4200,http://127.0.0.1:4200'
     ).split(',') if o.strip()
@@ -160,7 +163,7 @@ STT_COMPUTE_TYPE = os.environ.get('STT_COMPUTE_TYPE', 'int8')
 # LLM Configuration
 LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'gemini')
 LLM_API_KEY = os.environ.get('LLM_API_KEY', '')
-LLM_MODEL = os.environ.get('LLM_MODEL', 'gemini-3.8-flash')
+LLM_MODEL = os.environ.get('LLM_MODEL', 'gemini-2.0-flash')
 LLM_BASE_URL = os.environ.get('LLM_BASE_URL', '')
 LLM_TIMEOUT = int(os.environ.get('LLM_TIMEOUT', '30'))
 LLM_MAX_RETRIES = int(os.environ.get('LLM_MAX_RETRIES', '2'))
