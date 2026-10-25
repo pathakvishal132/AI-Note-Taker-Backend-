@@ -167,7 +167,7 @@ STT_COMPUTE_TYPE = os.environ.get('STT_COMPUTE_TYPE', 'int8')
 # LLM Configuration
 LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'gemini')
 LLM_API_KEY = os.environ.get('LLM_API_KEY', '')
-LLM_MODEL = os.environ.get('LLM_MODEL', 'gemini-2.0-flash')
+LLM_MODEL = os.environ.get('LLM_MODEL', 'gemini-3.8-flash')
 LLM_BASE_URL = os.environ.get('LLM_BASE_URL', '')
 LLM_TIMEOUT = int(os.environ.get('LLM_TIMEOUT', '30'))
 LLM_MAX_RETRIES = int(os.environ.get('LLM_MAX_RETRIES', '2'))

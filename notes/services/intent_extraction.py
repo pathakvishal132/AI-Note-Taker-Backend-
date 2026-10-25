@@ -151,6 +151,10 @@ class IntentExtractionService:
             except LLMProviderError as e:
                 last_error = e
                 logger.error(f"LLM provider error (attempt {attempt}): {e}")
+                err_str = str(e).lower()
+                # Fast-fail unrecoverable credential/authorization errors
+                if any(x in err_str for x in ['401', '403', 'leaked', 'not valid', 'api_key_invalid']):
+                    break
                 if attempt <= self.max_retries:
                     continue
             except Exception as e:

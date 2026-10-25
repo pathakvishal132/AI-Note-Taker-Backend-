@@ -33,9 +33,10 @@ class GeminiProvider(BaseLLMProvider):
             raise LLMProviderError("LLM_API_KEY is not configured")
 
         import google.generativeai as genai
-        genai.configure(api_key=api_key)
+        # Use REST transport to avoid gRPC socket hangs on containerized cloud environments
+        genai.configure(api_key=api_key, transport='rest')
 
-        self.model_name = getattr(settings, 'LLM_MODEL', 'gemini-2.0-flash')
+        self.model_name = getattr(settings, 'LLM_MODEL', 'gemini-1.5-flash')
         self.model = genai.GenerativeModel(
             self.model_name,
             generation_config=genai.GenerationConfig(
@@ -51,6 +52,7 @@ class GeminiProvider(BaseLLMProvider):
                 [
                     {"role": "user", "parts": [system_prompt + "\n\nUser message:\n" + user_message]},
                 ],
+                request_options={"timeout": 15},
             )
             content = response.text
             if not content:
@@ -59,7 +61,7 @@ class GeminiProvider(BaseLLMProvider):
         except LLMProviderError:
             raise
         except Exception as e:
-            logger.error(f"Gemini API call failed: {type(e).__name__}")
+            logger.error(f"Gemini API call failed: {type(e).__name__}: {e}")
             raise LLMProviderError(f"Gemini API call failed: {e}") from e
 
 
