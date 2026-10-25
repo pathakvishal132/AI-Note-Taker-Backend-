@@ -48,11 +48,12 @@ class GeminiProvider(BaseLLMProvider):
 
     def chat_completion(self, system_prompt: str, user_message: str) -> str:
         try:
+            timeout_sec = getattr(settings, 'LLM_TIMEOUT', 45)
             response = self.model.generate_content(
                 [
                     {"role": "user", "parts": [system_prompt + "\n\nUser message:\n" + user_message]},
                 ],
-                request_options={"timeout": 15},
+                request_options={"timeout": timeout_sec},
             )
             content = response.text
             if not content:
