@@ -76,6 +76,10 @@ if DB_ENGINE == 'postgresql':
             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
             'HOST': os.environ.get('DB_HOST', 'localhost'),
             'PORT': os.environ.get('DB_PORT', '5432'),
+            'OPTIONS': {
+                'sslmode': os.environ.get('DB_SSLMODE', 'require'),
+            },
+            'DISABLE_SERVER_SIDE_CURSORS': True,
         }
     }
 else:
