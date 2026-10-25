@@ -25,40 +25,62 @@ class BaseLLMProvider(ABC):
 
 
 class GeminiProvider(BaseLLMProvider):
-    """Google Gemini LLM provider using the google-generativeai SDK."""
+    """Google Gemini LLM provider using direct HTTPS REST API for speed and reliability."""
 
     def __init__(self):
-        api_key = settings.LLM_API_KEY
-        if not api_key:
+        self.api_key = settings.LLM_API_KEY
+        if not self.api_key:
             raise LLMProviderError("LLM_API_KEY is not configured")
 
-        import google.generativeai as genai
-        # Use REST transport to avoid gRPC socket hangs on containerized cloud environments
-        genai.configure(api_key=api_key, transport='rest')
-
-        self.model_name = getattr(settings, 'LLM_MODEL', 'gemini-1.5-flash')
-        self.model = genai.GenerativeModel(
-            self.model_name,
-            generation_config=genai.GenerationConfig(
-                temperature=0.1,
-                max_output_tokens=1000,
-                response_mime_type="application/json",
-            ),
-        )
+        self.model_name = getattr(settings, 'LLM_MODEL', 'gemini-3.8-flash')
+        self.timeout = getattr(settings, 'LLM_TIMEOUT', 45)
 
     def chat_completion(self, system_prompt: str, user_message: str) -> str:
+        import requests
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent?key={self.api_key}"
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": f"{system_prompt}\n\nUser message:\n{user_message}"}
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.1,
+                "maxOutputTokens": 1000,
+                "responseMimeType": "application/json",
+            },
+        }
+
         try:
-            timeout_sec = getattr(settings, 'LLM_TIMEOUT', 45)
-            response = self.model.generate_content(
-                [
-                    {"role": "user", "parts": [system_prompt + "\n\nUser message:\n" + user_message]},
-                ],
-                request_options={"timeout": timeout_sec},
+            resp = requests.post(
+                url,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=self.timeout,
             )
-            content = response.text
-            if not content:
-                raise LLMProviderError("Gemini returned empty response")
-            return content
+            data = resp.json()
+
+            if resp.status_code != 200:
+                err_msg = data.get("error", {}).get("message", f"HTTP {resp.status_code}: {resp.text}")
+                logger.error(f"Gemini API returned error ({resp.status_code}): {err_msg}")
+                raise LLMProviderError(f"Gemini API error ({resp.status_code}): {err_msg}")
+
+            candidates = data.get("candidates", [])
+            if not candidates:
+                raise LLMProviderError("Gemini returned no candidates in response")
+
+            parts = candidates[0].get("content", {}).get("parts", [])
+            if not parts or "text" not in parts[0]:
+                raise LLMProviderError("Gemini candidate has no text content")
+
+            return parts[0]["text"]
+
+        except requests.Timeout as e:
+            logger.error(f"Gemini API request timed out after {self.timeout}s")
+            raise LLMProviderError(f"Gemini API timed out after {self.timeout}s: {e}") from e
         except LLMProviderError:
             raise
         except Exception as e:
