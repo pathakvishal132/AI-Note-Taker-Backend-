@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 class VoiceUploadThrottle(AnonRateThrottle):
     rate = settings.REST_FRAMEWORK.get('DEFAULT_THROTTLE_RATES', {}).get(
-        'voice_upload', '30/hour'
+        'voice_upload', '10/hour'
     )
 
 

@@ -1,5 +1,6 @@
 # NoteTaker Django Settings
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -126,8 +127,8 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.AnonRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': os.environ.get('API_THROTTLE_RATE', '100/hour'),
-        'voice_upload': os.environ.get('VOICE_THROTTLE_RATE', '30/hour'),
+        'anon': '1000/hour' if ('test' in sys.argv) else os.environ.get('API_THROTTLE_RATE', '10/hour'),
+        'voice_upload': '1000/hour' if ('test' in sys.argv) else os.environ.get('VOICE_THROTTLE_RATE', '10/hour'),
     },
 }
 

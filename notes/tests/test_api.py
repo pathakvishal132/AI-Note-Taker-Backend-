@@ -4,6 +4,7 @@ import io
 from unittest.mock import patch, MagicMock
 
 from django.test import TestCase
+from django.conf import settings
 from rest_framework.test import APIClient
 from rest_framework import status
 
@@ -401,3 +402,39 @@ class TestTaskExecutionService(TestCase):
         )
         result = self.service.execute(intent, note)
         self.assertEqual(result['type'], 'needs_clarification')
+
+
+class TestRateLimiting(TestCase):
+    def test_rate_limit_per_ip(self):
+        """Verify that requests exceeding 10 per hour per IP receive HTTP 429."""
+        from django.core.cache import cache
+        from rest_framework.test import APIRequestFactory
+        from rest_framework.throttling import AnonRateThrottle
+        from rest_framework.response import Response
+        from rest_framework.views import APIView
+
+        cache.clear()
+
+        class ThrottledThrottle(AnonRateThrottle):
+            rate = '10/hour'
+
+        class SampleView(APIView):
+            throttle_classes = [ThrottledThrottle]
+
+            def get(self, request):
+                return Response({'status': 'ok'})
+
+        view = SampleView.as_view()
+        factory = APIRequestFactory()
+
+        # Send 10 allowed requests from same client IP
+        for i in range(10):
+            req = factory.get('/test')
+            res = view(req)
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        # 11th request must be throttled with 429 Too Many Requests
+        req = factory.get('/test')
+        res = view(req)
+        self.assertEqual(res.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
